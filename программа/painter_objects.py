@@ -51,8 +51,13 @@ class graphic_function():
 						graphic.append(function_line)
 						function_line = Line(points=[],width=2)
 
+				if function_line.points:
+					if abs(y_coord-function_line.points[-1])>2000:	#на случай тригонометрической функции, которая уходит за пределы экрана и имеет вык. точки
+						graphic.append(function_line)
+						function_line = Line(points=[], width=2)
 
 				function_line.points +=(x_coord,y_coord)
+
 			graphic.append(function_line)
 			self.functions.append(graphic)
 
@@ -111,7 +116,6 @@ class graphic_function():
 		for coords in self.dots:
 			if coords[1]:
 				Color(1,1,1)
-				print(coords)
 				pos_y = (coords[1][0]+ coords[1][1]) /2
 				pos_x = coords[0] *self.cell + self.canvas_width/2 - dot_s
 				pos_y = pos_y*self.cell + height - self.canvas_height + self.canvas_height/2 - dot_s

@@ -286,7 +286,7 @@ class painter(Widget):
 		self.recovery_coordinations()
 
 		with self.canvas:
-			Color(0,0,0,5)
+			Color(0,0,0,0.3)
 			for x_line_coord in range(0,cell*amount_cell,cell):
 				line = Line(points=(cell*amount_cell*(-1)+self.x_coord_Yaxis,self.y_coord_Xaxis + x_line_coord,cell*amount_cell+self.x_coord_Yaxis, self.y_coord_Xaxis + x_line_coord))
 				line1 = Line(points=(cell*amount_cell*(-1)+self.x_coord_Yaxis,self.y_coord_Xaxis - x_line_coord ,cell*amount_cell+self.x_coord_Yaxis,self.y_coord_Xaxis - x_line_coord ))

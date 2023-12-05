@@ -21,7 +21,7 @@ def Building_function(inputs,devisions,text,Window):
 	if devisions:
 		for Input in inputs:
 			if len(devisions) > count:
-				function +=  Input.text 	#добавляем в строку то что было до деления 
+				function +=  Input.text 	#добавляем в строку то что было до деления
 				function += '((' +  devisions[count][0].text + ')/'	#добавляем в строку числитель
 				function +=  '(' + devisions[count][1].text + '))'		#добавляем в строку знаменатель
 
@@ -35,6 +35,7 @@ def Building_function(inputs,devisions,text,Window):
 	else:
 		function = text.text
 	function = function.replace(' ','')
+	print((function))
 	if "ctan" in function:
 		function = function.replace('cot','1/tan')
 
@@ -67,12 +68,15 @@ def Building_function(inputs,devisions,text,Window):
 		except:
 			Window.show_error('функция не имеет смысла')
 			return False
-		for x in range(-1000,1000):
-			x = x/20
-			result =fun(x)
+		for x in range(-4000,4000):
+			x = x/80
+			try:
+				result =round(fun(x),1)
+			except:
+				pass
 			try:
 				if result > 1000 or result < -1000:		#следим чтобы координаты точек не были слишком большими
-					pass
+					continue
 
 				elif str(result) != 'nan':
 					coords = np.append(coords,np.array([x,round(result,rounding)]))
@@ -175,11 +179,9 @@ def finding_dots(function,devisions,coords,fun_str):
 def find_near_coord_dot(dot,coords):
 	if -50 <dot<50:
 		for i in range(0,len(coords),2):
-			if coords[i] <= dot and dot >-40:
-				pass
+			if not(coords[i] <= dot >-40):
 
-			else:
-				if -50 < coords[i+1] < 50:
+				if -50 < coords[i+1] < 50 and abs(coords[i+1] - coords[i-1])< 10:
 					return (coords[i+1],coords[i-1])
 				else:
 					break
@@ -196,13 +198,15 @@ class Window_ask_function(Widget):
 		self.delits = []
 		self.orig_text = None
 		self.error_l = None
+
 		super(Window_ask_function,self).__init__(**kwargs)
 
 
 	def devision(self,text):
+
 		if not(self.orig_text):
 			self.orig_text = text
-		if len(self.devisions)<10:
+		if len(self.devisions)<5 :
 
 			if len(self.input_s) !=0:
 				text = self.input_s[-1]
@@ -213,19 +217,20 @@ class Window_ask_function(Widget):
 			self.input_s.append(text)
 
 
-			self.delit = TextInput(x = posx,center_y= height/2 +215,size = (35,25),font_size=11)
+
+			self.delit = TextInput(x = posx,center_y= height/2 +220,size = (35,30),font_size=13)
 			self.delit.bind(text=self.increase_size)
-			self.znamen = TextInput(x =posx,center_y= height/2 +190,size = (35,25),font_size=11)
+			self.znamen = TextInput(x =posx,center_y= height/2 +190,size = (35,30),font_size=13)
 			self.znamen.bind(text=self.increase_size)
 
 			self.devisions.append((self.delit,self.znamen))
 
 
-			size_new_input = (350 - (posx-width/3-100),50)
+			size_new_input = (350 - (posx-width/3-135),60)
 
 			self.new_input = TextInput(x = posx+self.delit.size[0],
 										center_y = height/2+190,size=size_new_input,
-										multiline = False,font_size = 25)
+										multiline = False,font_size = 30)
 
 			self.input_s.append(self.new_input)
 
@@ -249,13 +254,22 @@ class Window_ask_function(Widget):
 			self.painter.color_load()
 
 	def increase_size(self,Object,value):
-		new_size = len(value) * 8
+		new_size = len(value) * 9
+		sub_size = 0
+		for delit in self.devisions:
+			sub_size += delit[0].size[0]
+
+		for Input in self.input_s[:-1]:
+			sub_size += Input.size[0]
+		#print(len(self.input_s))
 		if Object == self.delit or Object == self.znamen:
 			if new_size > self.delit.size[0]-5:
 				self.delit.size[0] = new_size
 				self.znamen.size[0] = new_size
-				self.new_input.size[0] -= len(value)-2
-				self.new_input.pos[0] +=len(value)-2
+				self.new_input.size[0] =  350 - sub_size
+				if 350 - sub_size <0:
+					self.new_input.size[0] = 0
+				self.new_input.pos[0] = self.devisions[-1][0].pos[0] + new_size
 
 	def back(self,text):
 		self.button.remove_window()
@@ -264,21 +278,22 @@ class Window_ask_function(Widget):
 		self.clear(text)
 
 	def clear(self,text):
-		for Input in self.input_s:
-			self.remove_widget(Input)
+		for object in self.devisions:
+			self.remove_widget(object[0])
+			self.remove_widget(object[1])
 
-		for Input in self.devisions:
-			self.remove_widget(Input) 
+		for object in self.input_s[1:]:
+				self.remove_widget(object)
+				self.input_s.remove(object)
 
-		if self.input_s:
-			text.text = ''
-			first_input = self.input_s[0]
-			first_input.size[0] = 350
-			self.add_widget(first_input)
-		elif text:
-			text.text = ''
-		self.input_s.clear()
+		self.orig_text.size[0] = 350
+		self.orig_text.text = ''
+
+
+		self.input_s.append(self.orig_text)
+		print(len(self.input_s))
 		self.devisions.clear()
+
 
 
 	def show_error(self,text):

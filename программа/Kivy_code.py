@@ -178,13 +178,13 @@ kivy_code = f"""
     padding:10
 
     Button:
-        background_normal:'images/square.'
+        background_normal:'images/square1.png'
         on_release:root.pressed('square')
     Button:
-        background_normal:'images/square1.png'
+        background_normal:'images/ellipse11.png'
         on_release:root.pressed('ellipse')
     Button:
-        background_normal:'images/triangle.png'
+        background_normal:'images/triangle1.png'
         on_release:root.pressed('triangle')
     Button:
         background_normal:''
@@ -320,27 +320,27 @@ kivy_code = f"""
 
 <change_size>:
     size: (32,32)
-    pos: ({width/1.13},{height/4.8})
+    pos: ({width/1.13},{height/4.5-16})
     background_normal: 'images/button.png'
     background_down: 'images/button.png'
     Label:
         text:'size:'
-        pos: ({width/1.15},{height/4.7})
-        font_size:{width/65}
+        pos: ({width/1.15},{height/4.5-16 + (width - 1920)/50})
+        font_size:{width/90}
 
 
 
 
 <change_bright>:
     size: (32,32)
-    pos: ({width/1.05},{height/6.8})
+    pos: ({width/1.05},{height/6.2 - 16})
     background_normal: 'images/button.png'
     background_down: 'images/button.png'
     
     Label:
         text:'bright:'
-        pos: ({width/1.15},{height/6.7})
-        font_size:{width/65}
+        pos: ({width/1.15},{height/6.2 - 16  + (width - 1920)/50})
+        font_size:{width/90}
 
 
             
@@ -369,15 +369,15 @@ kivy_code = f"""
         background_down:''        
         center_x : {width/2-100}
         center_y : {height/2+190}
-        size:(350,50)
+        size:(350,60)
 
     TextInput:
         id: text     
         center_x : {width/2-100}
         center_y : {height/2+190}
-        size:(350,50)
+        size:(350,60)
         multiline:False
-        font_size:25
+        font_size:30
 
 
     Button:

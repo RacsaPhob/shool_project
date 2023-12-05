@@ -218,7 +218,7 @@ class App(App):
 		self.change_bright = change_bright(self.painter,self.curent_color)   #создание ползунка для смены прозрачности
 		self.change_bright.bind(state=self.change_bright.touch)     #биндим эту кнопку т.к. надо отслеживать ее нажатие и отжатие
 
-		self.change_size = change_size(self.painter,self.curent_color,self.change_bright) #создание ползунка для смены размера
+		self.change_size = change_size(self.painter,self.curent_color,self.change_bright)
 		self.change_size.bind(state=self.change_size.touch)
 
 
