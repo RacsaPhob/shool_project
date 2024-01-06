@@ -78,9 +78,10 @@ class change_bright(Button):
             if click.x > width/1.13 and click.x < width/1.05:
                 if  click.y > height/7 and  click.y < height/5:
                     self.painter.color_save(self.curent_color)
-                    self.bright = (click.x-width/1.132)/125
+                    self.bright = (click.x-width/1.135)/125
 
                     self.change_rect_bright()
+                    self.painter.change_color(self.curent_color,self.bright)
 
                     self.pos = (click.x-10,self.pos[1])
 

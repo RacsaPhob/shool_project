@@ -21,7 +21,7 @@ def Building_function(inputs,devisions,text,Window):
 	if devisions:
 		for Input in inputs:
 			if len(devisions) > count:
-				function +=  Input.text 	#добавляем в строку то что было до деления 
+				function +=  Input.text 	#добавляем в строку то что было до деления
 				function += '((' +  devisions[count][0].text + ')/'	#добавляем в строку числитель
 				function +=  '(' + devisions[count][1].text + '))'		#добавляем в строку знаменатель
 
@@ -35,6 +35,9 @@ def Building_function(inputs,devisions,text,Window):
 	else:
 		function = text.text
 	function = function.replace(' ','')
+	function = function.replace(')(',')*(')
+	function = function.replace('√' ,'sqrt')
+
 	if "ctan" in function:
 		function = function.replace('cot','1/tan')
 
@@ -45,41 +48,35 @@ def Building_function(inputs,devisions,text,Window):
 	y = sp.symbols('y')
 	coords = np.array([])	#массив с координатами точек графика вида (x1,y1,x2,y2,x3,y3,...)
 	try:
-		expression = (sp.sympify(function))		#парсинг полученного выражения(получаем выражение удобного вида для пайтона и numpy)
+		expression = (sp.sympify(function.replace('π','3.14159')))		#парсинг полученного выражения(получаем выражение удобного вида для пайтона и numpy)
 	except:
 		Window.show_error('ошибка:формула введена некоректно')
 		return False
 
-	if 'y' in function:		#если в выражении две переменной
-		fun = (sp.lambdify((x,y),expression,'numpy'))
-
-		for x in range(1,5):
-			for y in range(1,5):
-
-				result = (fun(x,y))
-				coords = np.append(coords,np.array([x,result]))
 
 
-	else:
+	try:
+		fun = (sp.lambdify((x),expression,'numpy'))
+	except:
+		Window.show_error('ошибка: функция не имеет смысла')
+		return False
 
+	for x in range(-4000,4000):
+		x = x/80
 		try:
-			fun = (sp.lambdify((x),expression,'numpy'))
+			result =round(fun(x),2)
 		except:
-			Window.show_error('функция не имеет смысла')
+			pass
+		try:
+			if result > 1000 or result < -1000:		#следим чтобы координаты точек не были слишком большими
+				continue
+
+			elif str(result) != 'nan':
+				coords = np.append(coords,np.array([x,round(result,rounding)]))
+
+		except:
+			Window.show_error('ошибка:формула введена некоректно')
 			return False
-		for x in range(-1000,1000):
-			x = x/20
-			result =fun(x)
-			try:
-				if result > 1000 or result < -1000:		#следим чтобы координаты точек не были слишком большими
-					pass
-
-				elif str(result) != 'nan':
-					coords = np.append(coords,np.array([x,round(result,rounding)]))
-
-			except:
-				Window.show_error('ошибка:формула введена некоректно')
-				return False
 
 	dots = finding_dots(fun,devisions,coords,function)
 
@@ -165,7 +162,6 @@ def finding_dots(function,devisions,coords,fun_str):
 
 				result = function(x/100)
 				if str(result) == 'inf':
-					print(x)
 					dots.append((x/100,find_near_coord_dot(x/100,coords)))
 
 
@@ -175,34 +171,47 @@ def finding_dots(function,devisions,coords,fun_str):
 def find_near_coord_dot(dot,coords):
 	if -50 <dot<50:
 		for i in range(0,len(coords),2):
-			if coords[i] <= dot and dot >-40:
-				pass
+			if not(coords[i] <= dot >-40):
 
-			else:
-				if -50 < coords[i+1] < 50:
+				if -50 < coords[i+1] < 50 and abs(coords[i+1] - coords[i-1])< 10:
 					return (coords[i+1],coords[i-1])
 				else:
 					break
+
+class ask_function_buttons(Widget):
+	def __init__(self,painter,window,**kwargs):
+		super(ask_function_buttons,self).__init__(**kwargs)
+		self.painter = painter
+		self.window = window
+
+	def typing(self,text):
+
+		self.window.typing(text)
 
 
 
 class Window_ask_function(Widget):
 	def __init__(self,painter,button,settings,**kwargs):
+		super(Window_ask_function,self).__init__(**kwargs)
+
 		self.button = button
 		self.devisions = []
 		self.input_s = []
 		self.painter = painter
 		self.settings = settings
 		self.delits = []
+		self.active = None
 		self.orig_text = None
 		self.error_l = None
-		super(Window_ask_function,self).__init__(**kwargs)
+
+		self.add_widget(ask_function_buttons(painter,self))
 
 
 	def devision(self,text):
+
 		if not(self.orig_text):
 			self.orig_text = text
-		if len(self.devisions)<10:
+		if len(self.devisions)<5 :
 
 			if len(self.input_s) !=0:
 				text = self.input_s[-1]
@@ -213,19 +222,28 @@ class Window_ask_function(Widget):
 			self.input_s.append(text)
 
 
-			self.delit = TextInput(x = posx,center_y= height/2 +215,size = (35,25),font_size=11)
+
+			self.delit = TextInput(x = posx,center_y= height/2 +220,size = (35,30),font_size=13, on_text = self.make_active)
 			self.delit.bind(text=self.increase_size)
-			self.znamen = TextInput(x =posx,center_y= height/2 +190,size = (35,25),font_size=11)
+			self.delit.bind(focus=self.make_active)
+
+
+			self.znamen = TextInput(x =posx,center_y= height/2 +190,size = (35,30),font_size=13, on_text = self.make_active)
 			self.znamen.bind(text=self.increase_size)
+			self.znamen.bind(focus=self.make_active)
+
 
 			self.devisions.append((self.delit,self.znamen))
 
 
-			size_new_input = (350 - (posx-width/3-100),50)
+			size_new_input = (350 - (posx-width/3-135),60)
 
 			self.new_input = TextInput(x = posx+self.delit.size[0],
 										center_y = height/2+190,size=size_new_input,
-										multiline = False,font_size = 25)
+										multiline = False,font_size = 30,
+									   on_text = self.make_active)
+			self.new_input.bind(focus=self.make_active)
+
 
 			self.input_s.append(self.new_input)
 
@@ -234,12 +252,13 @@ class Window_ask_function(Widget):
 			self.add_widget(self.znamen)
 
 
-	def accept(self,text):
+	def accept(self,text,size_cell):
 		if not(self.orig_text):
 			self.orig_text = text
 		function = Building_function(self.input_s,self.devisions,text,self)
 
 		if function:
+			self.painter.cell = 20 + (5*int(size_cell))
 			self.painter.add_string_in_line(function[2])
 			self.painter.draw_function(function[0],function[1])
 			self.settings.change_all_settings(('normal','down'))
@@ -249,13 +268,21 @@ class Window_ask_function(Widget):
 			self.painter.color_load()
 
 	def increase_size(self,Object,value):
-		new_size = len(value) * 8
+		new_size = len(value) * 11
+		sub_size = 0
+		for delit in self.devisions:
+			sub_size += delit[0].size[0]
+
+		for Input in self.input_s[:-1]:
+			sub_size += Input.size[0]
 		if Object == self.delit or Object == self.znamen:
 			if new_size > self.delit.size[0]-5:
 				self.delit.size[0] = new_size
 				self.znamen.size[0] = new_size
-				self.new_input.size[0] -= len(value)-2
-				self.new_input.pos[0] +=len(value)-2
+				self.new_input.size[0] =  350 - sub_size
+				if 350 - sub_size <0:
+					self.new_input.size[0] = 0
+				self.new_input.pos[0] = self.devisions[-1][0].pos[0] + new_size
 
 	def back(self,text):
 		self.button.remove_window()
@@ -264,21 +291,27 @@ class Window_ask_function(Widget):
 		self.clear(text)
 
 	def clear(self,text):
-		for Input in self.input_s:
-			self.remove_widget(Input)
 
-		for Input in self.devisions:
-			self.remove_widget(Input) 
+		if not(self.orig_text):
+			self.orig_text = text
 
-		if self.input_s:
-			text.text = ''
-			first_input = self.input_s[0]
-			first_input.size[0] = 350
-			self.add_widget(first_input)
-		elif text:
-			text.text = ''
-		self.input_s.clear()
+		for object in self.devisions:
+			self.remove_widget(object[0])
+			self.remove_widget(object[1])
+
+		for object in self.input_s[1:]:
+			if not (object == self.orig_text):
+				self.remove_widget(object)
+				self.input_s.remove(object)
+		if self.orig_text:
+			self.orig_text.size[0] = 350
+			self.orig_text.text = ''
+
+
+
+		self.input_s.append(self.orig_text)
 		self.devisions.clear()
+
 
 
 	def show_error(self,text):
@@ -286,6 +319,40 @@ class Window_ask_function(Widget):
 			self.error_l = Label(text=text,color=(1,0,0),font_size=20,center_x=width/2-50,center_y=height/2+220)
 			self.add_widget(self.error_l)
 		self.clear(self.orig_text)
+
+	def change_size_cell(self,input,action):
+		if action =='+' and int(input.text)<5:
+			input.text = str(int(input.text)+1)
+
+		if action =='-' and int(input.text)>1:
+			input.text = str(int(input.text)-1)
+
+
+	def change_De_Ra(self,button):
+		mode = button.text
+		if mode == 'de':
+			button.text = 'ra'
+			self.painter.dera = 'ra'
+		elif mode == 'ra':
+			button.text = 'de'
+			self.painter.dera = 'de'
+
+	def typing(self,text):
+		if not self.active:
+			for object in self.children:
+				if isinstance(object,TextInput):
+					self.active = object
+		old_text = self.active.text
+		if text != 'π':
+			self.active.text = old_text + text + '()'
+		else:
+			self.active.text = old_text + text
+
+
+	def make_active(self,input,value):
+		if value:
+
+			self.active = input
 
 
 
@@ -360,15 +427,17 @@ class Ask_function_settings(GridLayout):
 
 
 	def change_all_settings(self,states):
-		functions = [self.pressed_1,self.pressed_2,self.pressed_3,self.pressed_4,self.pressed_5,self.pressed_6]
+		functions = [self.pressed_1,self.pressed_4,self.pressed_2,self.pressed_5,self.pressed_3,self.pressed_6]
 		count = 0
 		children = self.children.copy()
 		children.reverse()
 		for child in children:		#виджеты хронятся в children в виде: кнопка, описание, кнопка, описание
 			if isinstance(child,ToggleButton):	# так что необходимо изменять состояние каждого второго элемента из children
+
 				if child.state == states[0] :
-					if not(count == 6 and states[1] == 'down'):		#меняем все функции кроме общих точек 
+					if not(count == 6 and states[1] == 'down'):		#меняем все функции кроме общих точек
 						functions[int(count/2)](states[1])
+
 						child.state = states[1]
 
 			count +=1	

@@ -1,5 +1,8 @@
 
 from Kivy_code import *
+from size_images import *
+adjustment(width, height)
+
 from kivy.lang import Builder
 
 from kivy.config import Config
@@ -10,7 +13,7 @@ Config.set('graphics', 'resizable','0')
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.uix.label import Label 
+from kivy.uix.label import Label
 
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
@@ -26,17 +29,33 @@ from painter_objects import moving_painter_but
 
 from tkinter import Tk
 from tkinter.filedialog import asksaveasfilename    #  в Tkinter можно создать окно сохранения файла
-Tk().withdraw()    #создаем и сразу убираем окно
+Tk().withdraw()    #убирает окно Tkinter
 
 
 
 class Figure_Buttons(GridLayout):
-	def __init__(self,painter,**kwargs):
+	def __init__(self,painter,App_window,**kwargs):
+
+		self.labelMaking = LabelMaking()
+		self.LB_active = False
 		self.painter = painter
+		self.App_window = App_window
 		super(Figure_Buttons,self).__init__(**kwargs)
 
-	def pressed(self,figure):
-		self.painter.mode = figure
+	def pressed(self,mode):
+		if mode != 'text':
+			self.painter.mode = mode
+		else:
+			self.LB_active = not self.LB_active
+			if self.LB_active:
+				self.App_window.add_widget(self.labelMaking)
+			else:
+				self.App_window.remove_widget(self.labelMaking)
+
+class LabelMaking(Widget):
+	def __init__(self,**kwargs):
+		super(LabelMaking,self).__init__(**kwargs)
+
 
 class Figure_buttons_settings(GridLayout):
 	def __init__(self,painter,**kwargs):
@@ -142,8 +161,8 @@ class save_pic_but(Button):
 	# эффект нажатой кнопки путем уменьшения размера кнопки
 	def pressed(self, button):
 		button.size = (width / 20 - 5, width / 20 - 5)
-		button.center_x = width / 50
-		button.center_y = width / 50
+		button.center_x = width / 40
+		button.center_y = width / 40
 
 	# возвращение в исходное состоянии кнопки и открытиеокна сохранения файла
 	def on_touch_up(self, click):
@@ -165,22 +184,26 @@ class returns_buttons(Widget):
 		self.painter = painter
 		super(returns_buttons, self).__init__(**kwargs)
 
-	center_x: {width / 1.1 + width / 20 + (width / 340)}
-	center_y: {height - height / 70}
 
 	def pressed_left(self, button):
-		button.size = (width / 22, height / 22)
+		button.size = (width / 20.5, height / 20.5)
 		button.center_x = width / 1.1
 		button.center_y = height - height / 30
 
 	def pressed_right(self, button):
-		button.size = (width / 22, height / 22)
+		button.size = (width / 20.5, height / 20.5)
 		button.center_x = width / 1.1 + width / 20 + (width / 340)
 		button.center_y = height - height / 30
 
-	def touch_up(self, button):
+	def touch_up(self, button,direct):
 		button.size = (width / 20, height / 20)
-		button.center_y = height - height / 30
+		button.center_y = (height - height / 85) - height / 47
+
+		if direct == 'left':
+			button.center_x = width/1.0955
+
+		else:
+			button.center_x = width/1.0955+width/20+(width/340)
 
 	def release_left(self):
 		self.painter.back()
@@ -196,13 +219,13 @@ class App(App):
 		self.AppWindow = Widget()    #главное окно приложения
 		self.painter = painter(self.AppWindow)    #создание холста
 		AppFloat.add_widget(self.painter)    #добавление холста на специальный слой чтобы он имел правильные размеры и позицию
- 
+
 		self.AppWindow.add_widget(AppFloat)    # добавление слоя с холстом на главное окно
 		color_buttons = self.making_buttons()    #создание кнопок смены цвета
 
 
 		self.AppWindow.add_widget(color_buttons)
-		
+
 		self.curent_color = Button(size=(width/13,width/13),   #создание виджета для показа текущего выбранного цвета
 			background_color = (0,0,0),    #черный цвет по умолчанию
 			pos = (width/1.1,0),
@@ -218,20 +241,20 @@ class App(App):
 		self.change_bright = change_bright(self.painter,self.curent_color)   #создание ползунка для смены прозрачности
 		self.change_bright.bind(state=self.change_bright.touch)     #биндим эту кнопку т.к. надо отслеживать ее нажатие и отжатие
 
-		self.change_size = change_size(self.painter,self.curent_color,self.change_bright) #создание ползунка для смены размера
+		self.change_size = change_size(self.painter,self.curent_color,self.change_bright)
 		self.change_size.bind(state=self.change_size.touch)
 
 
 		save_but = save_pic_but(self.painter)
 		Returns_Buttons = returns_buttons(self.painter)
 
-		clear_button = Button(pos = (0,height/10),    #кнопка очищения холста
-		    size=(width/33,height/12),
+		clear_button = Button(pos = (0,height/9),    #кнопка очищения холста
+		    size=(width/20,width/20),
 		    background_normal='images/trash.png',
 		    on_release= self.clear_button_pressed ,
-		    background_down='images/trash_pressed.png')
+		    background_down='images/trash.png')
 
-		figures_buttons = Figure_Buttons(self.painter)    #кнопки фигур
+		figures_buttons = Figure_Buttons(self.painter,self.AppWindow)    #кнопки фигур
 		figure_buttons_settings = Figure_buttons_settings(self.painter)
 
 
@@ -266,14 +289,13 @@ class App(App):
 
 
 	def making_buttons(self):
-		size_button = 70
 
 		#создание слоя с кнопками
 		buttons = GridLayout(size = (width / 11,height/1.5),pos = [width/1.122,height/3.8],cols = 2,rows = 9,spacing = 8)
 
 		#все цвета для политры
 		colors = [(1,0,0),(0.58, 0.28, 0.28),
-		    (1,0,0.5),(0.87, 0.01, 1),
+		    (1,0.5,0.5),(0.87, 0.01, 1),
 		    (0.14, 0.01, 1),(0.01, 0.77, 1),
 		    (0.01, 1, 0.47),(0.01, 1, 0.04),
 		    (0.1, 0.34, 0.01),(1,1,0),
@@ -282,8 +304,7 @@ class App(App):
 		    (0.45, 0.24, 0.01)]
 
 		for color in colors:
-			buttons.add_widget(Button(size=(size_button,size_button),
-		     	background_color = color,
+			buttons.add_widget(Button(background_color = color,
 		     	on_press= self.color_pressed,
 		     	background_normal = '',
 		     	background_down= ''))
@@ -311,6 +332,7 @@ class App(App):
 
 			self.AppWindow.add_widget(self.Clear_window)
 
-Builder.load_string(kivy_code)
 
-App = App().run()
+if __name__ == '__main__': 
+	Builder.load_string(kivy_code)
+	App = App().run()

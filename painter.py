@@ -10,21 +10,60 @@ import copy
 
 import pyautogui
 import math
+import numpy
+
 from shapely.geometry import LineString
+from shapely.geometry import  Polygon
+from shapely.affinity import  rotate
 
 
 width,height = pyautogui.size()
 
-cell = 20  #размер клетки заднего фона в пикселях
-amount_cell = 50
+amount_cell = 60
+
+def find_points_triangle(startX,startY,x,y,size):
+
+	tri = Polygon([(x, y+size*4), (x - 4 * size, y- 8 * size),(x + 4 * size, y- 8 * size)])
+	dx,dy = x - (startX-0.0001), y - (startY-0.0001)
+	angle = math.atan2(dx,dy)
+	angle = math.degrees(angle) * -1
+
+	tri = rotate(tri, angle=angle,origin=(x,y),use_radians=False)
+	points = list(tri.exterior.coords)[0:-1]
+	points = [points[0][0],points[0][1],points[1][0],points[1][1],points[2][0],points[2][1]]
+
+	return points,angle
+
+
+def find_new_coords_line(startX,startY,x,y, size, angle):
+	angle +=90
+	angle = angle * math.pi/180		#преобразуем градусы в радианы
+
+	long_squared = abs(x- startX)**2 + abs(y-startY)**2
+	long = math.sqrt(long_squared)
+	long -= size*8
+
+	if long <0:
+		return startX,startY
+
+	newX = long * (math.cos(angle))
+	newX += startX
+
+	newY = long * (math.sin(angle))
+	newY += startY
+
+	return (newX,newY)
+
+
 
 class painter(Widget):
 	def __init__(self,App_window,**kwargs):
 		super(painter,self).__init__(**kwargs)
-        
+
 		self.App_window = App_window
 
 		self.size_line = 2
+		self.cell = 30    # размер клетки заднего фона в пикселях
 		self.filling = False	#заливка фигур по дефолту нет
 		self.canvas_width = math.ceil( width/1.155)  # Ширина холста
 		self.canvas_height = math.ceil(height/1.2)  # Высота холста
@@ -39,6 +78,7 @@ class painter(Widget):
 		self.background = []
 		self.segments = []
 		self.mode = 'pencil'	#первоначально устанавливается режим кисти
+		self.dera = 'ra'
 
 		self.all_objects = []   #для хранения текущих обьектов на экране
 		self.colors = []    #для хранения использованных цветов
@@ -68,17 +108,18 @@ class painter(Widget):
 							pos = (self.width - (self.width - self.canvas_width )-140, height))
 
 
-		self.graphics_manager = graphic_function(self.canvas_width,self.canvas_height,cell,self.canvas)
+		self.graphics_manager = graphic_function(self.canvas_width,self.canvas_height,self.cell,self.canvas)
 
 		self.y_coord_Xaxis = height - self.canvas_height + self.canvas_height/2 - 4		#высота для оси х
 		self.x_coord_Yaxis =  self.canvas_width/2 - 4		#координата х для оси у
 
-		self.acceptable_x = (cell * amount_cell) - self.canvas_width/2-100
-		self.acceptable_y = (cell * amount_cell ) - self.canvas_height/2
+		self.acceptable_x = (self.cell * (amount_cell-10)) - self.canvas_width/2-100
+		self.acceptable_y = (self.cell * (amount_cell-10) ) - self.canvas_height/2
 
 
 
 	def on_touch_down(self,click):
+
 
 		#если курсор находится в зоне холста
 		if  self.collide_point(*click.pos)  and self.drawing_accept:
@@ -89,7 +130,20 @@ class painter(Widget):
 												click.x+self.size_line/2,click.y +self.size_line/2+1),width = self.size_line)
 
 					self.all_objects.append(self.line)    #сохраняем линию в список чтобы потом можно было удалить его отдельно или вернуть на экран
-				
+
+			elif self.mode == 'ruler':
+				with self.canvas:
+
+					self.line = Line(points = (click.x+self.size_line/2,click.y +self.size_line/2),width = self.size_line)
+					self.all_objects.append(self.line)
+
+			elif self.mode == 'arrow':
+				with self.canvas:
+					self.line = Line(points = (click.x+self.size_line/2,click.y +self.size_line/2),width = self.size_line,cap = 'none')
+					self.arrow = Triangle()
+
+					self.all_objects.append([self.line,self.arrow])
+
 
 			elif self.mode == 'square':
 				self.square = MakeSquare(click,self.size_line,self.filling,self.canvas)
@@ -127,6 +181,23 @@ class painter(Widget):
 
 					self.count +=1
 
+			elif self.mode == 'ruler':
+				with self.canvas:
+					self.line.points = (self.line.points[0],self.line.points[1],click.x,click.y )
+
+			elif self.mode == 'arrow':
+				with self.canvas:
+
+					#поворот треугольника в сторону направления стелки
+					p,angle = find_points_triangle(self.line.points[0], self.line.points[1], click.x, click.y, self.size_line)
+
+					#такие координаты конечной точки линии, чтобы при прозрачном цвете фигуры не накладывались
+					coords = find_new_coords_line(self.line.points[0], self.line.points[1], click.x, click.y, self.size_line, angle)
+
+					self.line.points = (self.line.points[0],self.line.points[1],coords[0],coords[1] )
+
+					self.arrow.points = [p[0],p[1],p[2],p[3],p[4],p[5]]
+
 
 			elif self.mode == 'square':
 				self.square.moving(click)
@@ -140,9 +211,6 @@ class painter(Widget):
 		#если курсор вышел за пределы холста начинаем новую линию(чтоб при возвращении курсора на холст не продолжолась предыдущая линия)
 		else:
 			self.new_line_needed = True
-
-
-
 
 
 
@@ -181,8 +249,12 @@ class painter(Widget):
 
 			last_object = self.all_objects.pop(-1)    #получааем последний объект
 
-			if not(isinstance(last_object,Line)):	#если этот объект не является линией нарисованный режимом pencil
+			if not(isinstance(last_object,Line)) and not(type(last_object) == type([])):	#если этот объект не является линией нарисованный режимом pencil
 				self.canvas.remove(last_object.figure)	#каждая кастомная фигура хранится в атриуте figure экземпляра класса этой фигуры
+
+			elif type(last_object) == type([]):	#удаление стрелки(она состоит из двух элементов)
+				for subObject in last_object:
+					self.canvas.remove(subObject)
 
 			else:
 				self.canvas.remove(last_object)
@@ -208,9 +280,13 @@ class painter(Widget):
 
 
 			Object = self.deleted_objects.pop(-1)	#получаем последний удаленный обьект
-			if not(isinstance(Object,Line)):	#если этот объект не является линией нарисованный режимом pencil
+			if not(isinstance(Object,Line)) and not(type(Object) == type([])):	#если этот объект не является линией нарисованный режимом pencil
 				self.canvas.add(Object.figure)		#каждая кастомная фигура хранится в атриуте figure экземпляра класса этой фигуры
 
+
+			elif type(Object) == type([]):
+				for subObject in Object:
+					self.canvas.add(subObject)
 			else:
 				self.canvas.add(Object)  
 
@@ -243,6 +319,7 @@ class painter(Widget):
 
 		self.list.pos[1] = self.height
 		self.list.size[1] = 200
+		self.list_count = 0
 
 
 
@@ -271,7 +348,7 @@ class painter(Widget):
 				Color(0.1, 0.1, 0.1)
 				self.gui.append(Rectangle(pos=(0,0),size = (width,self.pos[1])))
 				self.gui.append(Rectangle(pos=(self.canvas_width+10,0),
-		    				size = (1000,3000) ))
+							size = (1000,3000) ))
 
 			Color(1,1,1,0.15)
 			self.gui.append(Line(points=(width/1.13,height/4.5,width/1.05,height/4.5),width=5)) #линия ползунка смены размера кисти
@@ -282,22 +359,29 @@ class painter(Widget):
 
 
 	def draw_backgrounds(self):	# рисует клетчатый фон
+		if self.dera == 'de':
+			self.sizeX = (self.cell * math.pi / 4)
+
+		else:
+			self.sizeX = self.cell
+
 		self.background = []
 		self.recovery_coordinations()
 
 		with self.canvas:
-			Color(0,0,0,5)
-			for x_line_coord in range(0,cell*amount_cell,cell):
-				line = Line(points=(cell*amount_cell*(-1)+self.x_coord_Yaxis,self.y_coord_Xaxis + x_line_coord,cell*amount_cell+self.x_coord_Yaxis, self.y_coord_Xaxis + x_line_coord))
-				line1 = Line(points=(cell*amount_cell*(-1)+self.x_coord_Yaxis,self.y_coord_Xaxis - x_line_coord ,cell*amount_cell+self.x_coord_Yaxis,self.y_coord_Xaxis - x_line_coord ))
+			Color(0,0,0,0.3)
+			for x_line_coord in range(0,self.cell*amount_cell,self.cell):
+				line = Line(points=(self.cell*amount_cell*(-1)+self.x_coord_Yaxis,self.y_coord_Xaxis + x_line_coord,self.cell*amount_cell+self.x_coord_Yaxis, self.y_coord_Xaxis + x_line_coord))
+				line1 = Line(points=(self.cell*amount_cell*(-1)+self.x_coord_Yaxis,self.y_coord_Xaxis - x_line_coord ,self.cell*amount_cell+self.x_coord_Yaxis,self.y_coord_Xaxis - x_line_coord ))
 
 				self.background += [line,line1]
 
-			for y_line_coord in range(0,cell*50,cell):
-				line = Line(points=(self.x_coord_Yaxis + y_line_coord,cell*amount_cell+ self.y_coord_Xaxis,self.x_coord_Yaxis + y_line_coord,cell*amount_cell*(-1) + self.y_coord_Xaxis))
-				line1 = Line(points=(self.x_coord_Yaxis - y_line_coord, cell*amount_cell+ self.y_coord_Xaxis, self.x_coord_Yaxis - y_line_coord, cell*amount_cell*(-1) + self.y_coord_Xaxis))
-				self.background += [line,line1]
+			for y_line_coord in range(0,amount_cell):
+				y_line_coord *=self.sizeX
 
+				line = Line(points=(self.x_coord_Yaxis + y_line_coord,self.sizeX*amount_cell+ self.y_coord_Xaxis,self.x_coord_Yaxis + y_line_coord,self.sizeX*amount_cell*(-1) + self.y_coord_Xaxis))
+				line1 = Line(points=(self.x_coord_Yaxis - y_line_coord, self.sizeX*amount_cell+ self.y_coord_Xaxis, self.x_coord_Yaxis - y_line_coord, self.sizeX*amount_cell*(-1) + self.y_coord_Xaxis))
+				self.background += [line,line1]
 		self.recovery(full=False)
 
 
@@ -330,18 +414,67 @@ class painter(Widget):
 		self.segments = []
 		y_coord_Xaxis = height - self.canvas_height + self.canvas_height/2 + 5
 		x_coord_Yaxis =  self.canvas_width/2 +5
-		for x in range(cell*amount_cell*(-1),cell*amount_cell,cell):
+		for x in range(amount_cell*(-1),amount_cell):
+			x *= self.sizeX
 
-			segment = Label(text = str(int(x/cell)),color=(0,0,0),center_x = x + self.canvas_width/2,
-							center_y = y_coord_Xaxis,font_size=10 )
+			number = (int(x/round(self.sizeX)))
+			if self.dera == 'de':
+				if number % 4 == 0 :
+					text2 = None
+					if number == 0:
+						text = '0'
+					elif number == 4:
+						text = 'π'
 
-			self.segments.append(segment)
-			self.add_widget(segment)
+					elif number == -4:
+						text = '-π'
+					else:
+						text = str(number//4) + 'π'
 
-		for y in range(cell*amount_cell*(-1),cell*amount_cell,cell):
+				elif number % 2 ==0 and number %4 != 0:
+					text2 = '2'
+					if number == -2:
+						text1 = '-π'
 
-			segment = Label(text = str(int(y/cell)),color=(0,0,0),center_x = x_coord_Yaxis ,
-							center_y = y  + self.canvas_height/2 + (height-self.canvas_height),font_size=10 )
+
+					elif number == 2:
+						text1 = 'π'
+
+					else:
+						text1 = f'{number//2}π'
+
+				elif number %2 !=0:
+					text2 = 'π'
+					text1 = str(number)
+
+			else:
+				text = str(number)
+
+			if self.dera == 'de' and text2:
+				segment1 = Label(text = text1,color=(0,0,0,0.6),center_x = x + self.canvas_width/2,
+								center_y = y_coord_Xaxis+12,font_size=12 )
+				segment2 = Label(text = '_',color=(0,0,0,0.6),center_x = x + self.canvas_width/2,
+								center_y = y_coord_Xaxis+14,font_size=25 )
+				segment3 = Label(text = text2,color=(0,0,0,0.6),center_x = x + self.canvas_width/2,
+								center_y = y_coord_Xaxis,font_size=12 )
+				self.segments.append(segment1)
+				self.add_widget(segment1)
+				self.segments.append(segment2)
+				self.add_widget(segment2)
+				self.segments.append(segment3)
+				self.add_widget(segment3)
+			else:
+
+				segment = Label(text = text,color=(0,0,0,0.6),center_x = x + self.canvas_width/2,
+								center_y = y_coord_Xaxis,font_size=15 )
+
+				self.segments.append(segment)
+				self.add_widget(segment)
+
+		for y in range(self.cell*amount_cell*(-1),self.cell*amount_cell,self.cell):
+
+			segment = Label(text = str(int(y/self.cell)),color=(0,0,0,0.6),center_x = x_coord_Yaxis ,
+							center_y = y  + self.canvas_height/2 + (height-self.canvas_height),font_size=15 )
 
 			self.segments.append(segment)
 			self.add_widget(segment)
@@ -365,14 +498,13 @@ class painter(Widget):
 
 	def draw_generals(self):
 		self.recovery_coordinations()
-		with self.canvas:
-			if len(self.graphics_manager.functions) >1:
-				self.generals_active = True
+		if len(self.graphics_manager.functions) >1:
+			self.generals_active = True
 
-				self.graphics_manager.draw_general_dots()
+			self.graphics_manager.draw_general_dots()
 
-				self.color_load()
-				self.recovery(full=False)
+			self.color_load()
+			self.recovery(full=False)
 
 	def remove_generals(self):
 		self.generals_active = False
@@ -382,7 +514,10 @@ class painter(Widget):
 	def draw_function(self,function,dots):
 		self.color_load()
 		self.recovery_coordinations()
+		self.acceptable_x = (self.cell * (amount_cell-10)) - self.canvas_width/2-100
+		self.acceptable_y = (self.cell * (amount_cell-10) ) - self.canvas_height/2
 
+		self.graphics_manager.cell = self.cell
 		self.functions = self.graphics_manager.new_function(function,dots)
 
 
@@ -403,15 +538,17 @@ class painter(Widget):
 
 
 	def add_string_in_line(self,string):
-
-		if len(string) >= 8:
-			font_size = 25 - len(string)  /2
+		x_pose = self.list.pos[0]+20
+		if len(string) >= 4:
+			x_pose += len(string)* 1.9
+			font_size = 25 - len(string)  /1.75
 
 		else:
 			font_size = 25
 
+
 		string = (Label(text = string,font_size = font_size,color = self.curent_color,
-									x = self.list.pos[0]+15 + len(string)*5,
+									x = x_pose,
 									center_y = height-15 - self.list_count*30))
 
 		string1 = (Label(text = 'f(x):',font_size = font_size,color = self.curent_color,x = self.list.pos[0]-20 ,
@@ -456,9 +593,16 @@ class painter(Widget):
 			self.biasY -=y
 			for object in self.all_objects + self.background:
 
-				if not(isinstance(object,Line)):
+				if not(isinstance(object,Line)) and not(type(object) == type([])):
 
 					object.move_directly(x,y)
+
+				elif type(object) == type([]):
+					pos = object[0].points
+					object[0].points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y]
+
+					pos = object[1].points
+					object[1].points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y,pos[4]+x,pos[5]+y]
 
 				else:
 					count = 0
@@ -494,21 +638,17 @@ class painter(Widget):
 						count +=1
 
 					segment.points = new_pos
-
 			if self.segments:
 				for segment in self.segments:
 					segment.center_x += x
 					segment.center_y += y
+
 			for general in self.graphics_manager.generals:
-				general  .pos = [general  .pos[0] + x, general  .pos[1] + y]
+				general.pos = [general.pos[0] + x, general.pos[1] + y]
 
 			for dot in self.graphics_manager.dots_draw:
-				if not(isinstance(dot,Line)):
+				dot.pos = [dot.pos[0]+x,dot.pos[1]+y]
 
-					dot.pos = [dot.pos[0]+x,dot.pos[1]+y]
-				else:
-					dotE = dot.ellipse
-					dot.ellipse = [dotE[0]+x,dotE[1]+y,dotE[2],dotE[3]]
 			self.recovery(full=False)
 
 	def recovery_coordinations(self):
