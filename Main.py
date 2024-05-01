@@ -6,25 +6,25 @@ adjustment(width, height)
 from kivy.lang import Builder
 
 from kivy.config import Config
+
+
+
 Config.set('graphics', 'width',str(width) )
 Config.set('graphics', 'height',str(height))
 Config.set('graphics', 'resizable','0')
 
+
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.uix.label import Label
 
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.boxlayout import BoxLayout
 
 from painter import painter
 from graphic_calculating import Ask_function_but, Ask_function_settings
 from brush_settings import change_size, change_bright
 
-from painter_objects import moving_painter_but
+from painter_objects import moving_painter_widget
 
 
 from tkinter import Tk
@@ -36,25 +36,13 @@ Tk().withdraw()    #убирает окно Tkinter
 class Figure_Buttons(GridLayout):
 	def __init__(self,painter,App_window,**kwargs):
 
-		self.labelMaking = LabelMaking()
-		self.LB_active = False
 		self.painter = painter
 		self.App_window = App_window
 		super(Figure_Buttons,self).__init__(**kwargs)
 
 	def pressed(self,mode):
-		if mode != 'text':
-			self.painter.mode = mode
-		else:
-			self.LB_active = not self.LB_active
-			if self.LB_active:
-				self.App_window.add_widget(self.labelMaking)
-			else:
-				self.App_window.remove_widget(self.labelMaking)
+		self.painter.mode = mode
 
-class LabelMaking(Widget):
-	def __init__(self,**kwargs):
-		super(LabelMaking,self).__init__(**kwargs)
 
 
 class Figure_buttons_settings(GridLayout):
@@ -127,28 +115,31 @@ class Ask_Color(Widget):
 		self.curent_color.background_color = (self.red_value,self.green_value,self.blue_value)
 		self.painter.change_color(self.curent_color)
 		self.painter.color_save(self.curent_color)
+
 		self.button.remove_window()
 
 
 class clear_window(Button):
 
-	def __init__(self, painter, sub_windows, settings, button, **kwargs):
-		self.sub_windows = sub_windows
+	def __init__(self, painter,  settings, button,func_but, **kwargs):
 		self.painter = painter
 		self.settings = settings
 		self.button = button
+		self.func_but = func_but
 		super(clear_window, self).__init__(**kwargs)
 
-	def yes(self, button):
+	def yes(self):
 		# при нажатии на кнопку ДА сначало стирается окно, а потом очищается холст
-		self.no(None)
+		self.no()
+
+		self.func_but.remove_window()
 
 		self.settings.change_all_settings(('down', 'normal'))
 		self.painter.clear_canvas(None)
 
-	def no(self, button):
-		self.button.active_clbut = False
-		self.parent.remove_widget(self)
+	def no(self):
+		self.button.active = False
+		self.button.remove()
 
 
 class save_pic_but(Button):
@@ -186,24 +177,24 @@ class returns_buttons(Widget):
 
 
 	def pressed_left(self, button):
-		button.size = (width / 20.5, height / 20.5)
+		button.size = (width / 21, height / 21)
 		button.center_x = width / 1.1
-		button.center_y = height - height / 30
+		button.center_y = height - height / 25
 
 	def pressed_right(self, button):
-		button.size = (width / 20.5, height / 20.5)
+		button.size = (width / 21, height / 21)
 		button.center_x = width / 1.1 + width / 20 + (width / 340)
-		button.center_y = height - height / 30
+		button.center_y = height - height / 25
 
 	def touch_up(self, button,direct):
-		button.size = (width / 20, height / 20)
-		button.center_y = (height - height / 85) - height / 47
+		button.size = (width / 21, height / 21)
+		button.center_y = (height - height / 50) - height / 47
 
 		if direct == 'left':
 			button.center_x = width/1.0955
 
 		else:
-			button.center_x = width/1.0955+width/20+(width/340)
+			button.center_x = width/1.0955+width/21+(width/340)
 
 	def release_left(self):
 		self.painter.back()
@@ -215,16 +206,14 @@ class returns_buttons(Widget):
 class App(App):
 
 	def build(self):
-		AppFloat = FloatLayout()    #слой на котором будет холст
-		self.AppWindow = Widget()    #главное окно приложения
-		self.painter = painter(self.AppWindow)    #создание холста
-		AppFloat.add_widget(self.painter)    #добавление холста на специальный слой чтобы он имел правильные размеры и позицию
+		AppWindow = Widget()    #главное окно приложения
+		self.painter = painter(AppWindow)    #создание холста
 
-		self.AppWindow.add_widget(AppFloat)    # добавление слоя с холстом на главное окно
+		AppWindow.add_widget(self.painter)    # добавление слоя с холстом на главное окно
 		color_buttons = self.making_buttons()    #создание кнопок смены цвета
 
 
-		self.AppWindow.add_widget(color_buttons)
+		AppWindow.add_widget(color_buttons)
 
 		self.curent_color = Button(size=(width/13,width/13),   #создание виджета для показа текущего выбранного цвета
 			background_color = (0,0,0),    #черный цвет по умолчанию
@@ -233,59 +222,53 @@ class App(App):
 			background_disabled_normal= '')   #убираем дефолтный фон нажатой кнопки
 
 
-		personal_color_but = Personal_color_but(self.AppWindow,self.painter,self.curent_color)
-		self.ask_function_settings = Ask_function_settings(self.painter)
-		ask_function_but = Ask_function_but(self.AppWindow,self.painter,self.ask_function_settings)
+		personal_color_but = Personal_color_but(AppWindow,self.painter,self.curent_color)
+		ask_function_settings = Ask_function_settings(self.painter)
+		ask_function_but = Ask_function_but(AppWindow,self.painter,ask_function_settings)
 
 
 		self.change_bright = change_bright(self.painter,self.curent_color)   #создание ползунка для смены прозрачности
 		self.change_bright.bind(state=self.change_bright.touch)     #биндим эту кнопку т.к. надо отслеживать ее нажатие и отжатие
 
-		self.change_size = change_size(self.painter,self.curent_color,self.change_bright)
-		self.change_size.bind(state=self.change_size.touch)
+		Change_size = change_size(self.painter,self.curent_color,self.change_bright)
+		Change_size.bind(state=Change_size.touch)
 
 
 		save_but = save_pic_but(self.painter)
 		Returns_Buttons = returns_buttons(self.painter)
 
-		clear_button = Button(pos = (0,height/9),    #кнопка очищения холста
-		    size=(width/20,width/20),
-		    background_normal='images/trash.png',
-		    on_release= self.clear_button_pressed ,
-		    background_down='images/trash.png')
+		clear_button = Clear_button(self.painter,AppWindow,ask_function_settings, ask_function_but)    #кнопка очищения холста
 
-		figures_buttons = Figure_Buttons(self.painter,self.AppWindow)    #кнопки фигур
+		figures_buttons = Figure_Buttons(self.painter,AppWindow)    #кнопки фигур
 		figure_buttons_settings = Figure_buttons_settings(self.painter)
 
 
 		#сохраняем текущий черный цвет
-		self.painter.color_save(self.curent_color,)
+		self.painter.color_save(self.curent_color)
 		self.painter.color_load()
 
 		#добавление виджетов на главное окно
-		self.AppWindow.add_widget(self.curent_color)
-		self.AppWindow.add_widget(personal_color_but)
-		self.AppWindow.add_widget(ask_function_but)
-		self.AppWindow.add_widget(self.ask_function_settings)
+		AppWindow.add_widget(self.curent_color)
+		AppWindow.add_widget(personal_color_but)
+		AppWindow.add_widget(ask_function_but)
+		AppWindow.add_widget(ask_function_settings)
 
 
-		self.AppWindow.add_widget(clear_button)
-		self.AppWindow.add_widget(save_but)
-		self.AppWindow.add_widget(Returns_Buttons)
+		AppWindow.add_widget(clear_button)
+		AppWindow.add_widget(save_but)
+		AppWindow.add_widget(Returns_Buttons)
 
 
-		self.AppWindow.add_widget(figures_buttons)
-		self.AppWindow.add_widget(figure_buttons_settings)
+		AppWindow.add_widget(figures_buttons)
+		AppWindow.add_widget(figure_buttons_settings)
 
-		self.AppWindow.add_widget(moving_painter_but(self.AppWindow,self.painter))
+		AppWindow.add_widget(moving_painter_widget(self.painter))
 
 
-		self.AppWindow.add_widget(self.change_size)
-		self.AppWindow.add_widget(self.change_bright)
-		self.sub_windows = []
-		self.active_clbut = False
+		AppWindow.add_widget(Change_size)
+		AppWindow.add_widget(self.change_bright)
 
-		return self.AppWindow
+		return AppWindow
 
 
 	def making_buttons(self):
@@ -297,7 +280,7 @@ class App(App):
 		colors = [(1,0,0),(0.58, 0.28, 0.28),
 		    (1,0.5,0.5),(0.87, 0.01, 1),
 		    (0.14, 0.01, 1),(0.01, 0.77, 1),
-		    (0.01, 1, 0.47),(0.01, 1, 0.04),
+		    (0.01, 1, 0.77),(0.01, 1, 0.0),
 		    (0.1, 0.34, 0.01),(1,1,0),
 		    (1, 0.53, 0),(1,1,1),
 		    (0.36, 0.36, 0.36),(0,0,0),
@@ -311,26 +294,36 @@ class App(App):
 
 		return buttons
 
-
 	#при нажатие на кнопку из палитры
 	def color_pressed(self,button):
-        
+
 		self.painter.change_color(button,self.change_bright.bright)    #меняем цвет текущей кисти
-
 		self.curent_color.background_color = (button.background_color)    #меняем цвет виджета текущего цвета
-
-		#загружаем цвет
 		self.painter.color_save(self.curent_color,self.change_bright.bright)
-		self.painter.color_load()
 
 
-	def clear_button_pressed(self,button):
-		if not(self.active_clbut):
-			self.active_clbut = True
-			self.Clear_window = clear_window(self.painter,self.sub_windows,self.ask_function_settings,self)
-			self.sub_windows.append(self.Clear_window)
+class Clear_button(Button):
+	def __init__(self,painter,window,ask_function_settings,func_but ,**kwargs):
+		super(Clear_button, self).__init__(**kwargs)
+		self.active = False
+		self.window = window
+		self.Clear_window = clear_window(painter, ask_function_settings, self, func_but)
 
-			self.AppWindow.add_widget(self.Clear_window)
+	def on_press(self):
+		self.size = (width / 20 - 5, width / 20 - 5)
+		self.center_x = width / 40
+		self.pos_y = height/9
+
+	def on_touch_up(self, touch):
+		self.size = (width // 20, width // 20)
+		if self.collide_point(*touch.pos) and not(self.active):
+			self.active = True
+			self.window.add_widget(self.Clear_window)
+
+
+	def remove(self):
+		self.window.remove_widget(self.Clear_window)
+
 
 
 if __name__ == '__main__': 

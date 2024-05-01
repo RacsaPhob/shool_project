@@ -1,8 +1,8 @@
-from kivy.graphics import (Color, Ellipse,Triangle, Rectangle,Line)
+from kivy.graphics import (Color,Triangle, Rectangle,Line)
 
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label 
-from kivy.uix.button import Button 
+from kivy.uix.button import Button
 
 
 from painter_objects import MakeTriangle, MakeSquare, MakeEllipse, graphic_function
@@ -10,9 +10,7 @@ import copy
 
 import pyautogui
 import math
-import numpy
 
-from shapely.geometry import LineString
 from shapely.geometry import  Polygon
 from shapely.affinity import  rotate
 
@@ -72,13 +70,12 @@ class painter(Widget):
 		self.pos = (0,height/4)
 
 
-		self.count = 0
 		self.drawing_accept = True
 		self.new_line_needed = None
 		self.background = []
 		self.segments = []
 		self.mode = 'pencil'	#первоначально устанавливается режим кисти
-		self.dera = 'ra'
+		self.dera = 'ra'	#единичные отрезки устанавливаются в радианах по умолчанию
 
 		self.all_objects = []   #для хранения текущих обьектов на экране
 		self.colors = []    #для хранения использованных цветов
@@ -123,70 +120,61 @@ class painter(Widget):
 
 		#если курсор находится в зоне холста
 		if  self.collide_point(*click.pos)  and self.drawing_accept:
-
-			if self.mode == 'pencil':
-				with self.canvas:
+			with self.canvas:
+				if self.mode == 'pencil':
 					self.line = Line(points = (click.x+self.size_line/2,click.y +self.size_line/2,
-												click.x+self.size_line/2,click.y +self.size_line/2+1),width = self.size_line)
+													click.x+self.size_line/2,click.y +self.size_line/2+1),width = self.size_line)
 
 					self.all_objects.append(self.line)    #сохраняем линию в список чтобы потом можно было удалить его отдельно или вернуть на экран
 
-			elif self.mode == 'ruler':
-				with self.canvas:
+				elif self.mode == 'ruler':
 
 					self.line = Line(points = (click.x+self.size_line/2,click.y +self.size_line/2),width = self.size_line)
 					self.all_objects.append(self.line)
 
-			elif self.mode == 'arrow':
-				with self.canvas:
+				elif self.mode == 'arrow':
 					self.line = Line(points = (click.x+self.size_line/2,click.y +self.size_line/2),width = self.size_line,cap = 'none')
 					self.arrow = Triangle()
 
 					self.all_objects.append([self.line,self.arrow])
 
 
-			elif self.mode == 'square':
-				self.square = MakeSquare(click,self.size_line,self.filling,self.canvas)
-				self.all_objects.append(self.square)
+				elif self.mode == 'square':
+					self.square = MakeSquare(click,self.size_line,self.filling)
+					self.all_objects.append(self.square)
 
-			elif self.mode == 'triangle':
-				self.triangle = MakeTriangle(click,self.size_line,self.filling,self.canvas)
-				self.all_objects.append(self.triangle)
+				elif self.mode == 'triangle':
+					self.triangle = MakeTriangle(click,self.size_line,self.filling)
+					self.all_objects.append(self.triangle)
 
-			elif self.mode == 'ellipse':
-				self.ellipse = MakeEllipse(click,self.size_line,self.filling,self.canvas)
-				self.all_objects.append(self.ellipse)
+				elif self.mode == 'ellipse':
+					self.ellipse = MakeEllipse(click,self.size_line,self.filling)
+					self.all_objects.append(self.ellipse)
 
-			self.colors.append(self.curent_color)   #сохраняем цвет начатой линии в список 
+				self.colors.append(self.curent_color)   #сохраняем цвет начатой линии в список
 
 
 	def on_touch_move(self,click) :
 
 
 		if  self.collide_point(*click.pos) and self.drawing_accept:
-			if self.mode == 'pencil':
+			with self.canvas:
+				if self.mode == 'pencil':
 
-				if self.new_line_needed:
-					self.new_line_needed = False
-					with self.canvas:
+					if self.new_line_needed:
+						self.new_line_needed = False
 						self.line = Line(points = (),width = self.size_line)
 
-					#сохраняем новую линию и его цвет в списки
+						#сохраняем новую линию и его цвет в списки
 						self.colors.append(self.curent_color)
 						self.all_objects.append(self.line)
+					self.line.points += (click.x, click.y)
 
-				if 4 % 3 != 0:    #регулятор частоты обновлений точек для линии(чем больше второе число тем чаще будут добавлятся новые точки)
-					with self.canvas:
-						self.line.points +=(click.x+self.size_line/2,click.y +self.size_line/2)
 
-					self.count +=1
-
-			elif self.mode == 'ruler':
-				with self.canvas:
+				elif self.mode == 'ruler':
 					self.line.points = (self.line.points[0],self.line.points[1],click.x,click.y )
 
-			elif self.mode == 'arrow':
-				with self.canvas:
+				elif self.mode == 'arrow':
 
 					#поворот треугольника в сторону направления стелки
 					p,angle = find_points_triangle(self.line.points[0], self.line.points[1], click.x, click.y, self.size_line)
@@ -199,20 +187,20 @@ class painter(Widget):
 					self.arrow.points = [p[0],p[1],p[2],p[3],p[4],p[5]]
 
 
-			elif self.mode == 'square':
-				self.square.moving(click)
+				elif self.mode == 'square':
+					self.square.moving(click)
 
-			elif self.mode == 'triangle':
-				self.triangle.moving(click)
+				elif self.mode == 'triangle':
+					self.triangle.moving(click)
 
-			elif self.mode == 'ellipse':
-				self.ellipse.moving(click)
+				elif self.mode == 'ellipse':
+					self.ellipse.moving(click)
 
+
+				self.recovery(False)
 		#если курсор вышел за пределы холста начинаем новую линию(чтоб при возвращении курсора на холст не продолжолась предыдущая линия)
 		else:
 			self.new_line_needed = True
-
-
 
 
 	#меняем цвет при нажатии на кнопку политры
@@ -229,13 +217,10 @@ class painter(Widget):
 			
 
 	def color_save(self,curent_color,bright=None):
-		self.curent_color = copy.copy(curent_color.background_color)    #копируем цвет кнопки текущего цвета с помощью copy() чтобы мы не меняли цвет кнопки
-
-		if (bright):
+		self.curent_color = copy.copy(curent_color.background_color)
+		if bright:
 			self.curent_color[3] = bright    #если также цвет был полупрозрачным то добавляем прозрачность в скопированный цвет
-			
-		#with self.canvas:
-			#Color(1,1,1)    #меняем цвет чтобы там не было прозрачности
+
 
 	def color_load(self):
 		with self.canvas:    #восстановление раннего загруженого цвета
@@ -295,7 +280,6 @@ class painter(Widget):
 				Color(self.curent_color[0],self.curent_color[1],self.curent_color[2],self.curent_color[3])   #восстанавливаем цвет кисти
 
 
-
 	def clear_canvas(self,button):
 
 		self.canvas.clear()
@@ -312,6 +296,7 @@ class painter(Widget):
 		self.graphics_manager.inactive_generals.clear()
 		self.graphics_manager.dots.clear()
 
+
 		self.strings.clear()
 
 		for child in self.list.children:
@@ -321,21 +306,15 @@ class painter(Widget):
 		self.list.size[1] = 200
 		self.list_count = 0
 
-
-
-
 		#после очищения окна заново рисуем внешний вид интерфейса
 		self.recovery()
 
 
 	def recovery(self,full = True):	#восстановление вида интерфейса
 		with self.canvas:
+
 			for object in self.gui:
-				try:
-					pass
-					self.canvas.children.remove(object)
-				except:
-					pass
+				self.canvas.remove(object)
 			self.gui.clear()
 			if full:
 				Color(0.1, 0.1, 0.1)
@@ -444,8 +423,9 @@ class painter(Widget):
 						text1 = f'{number//2}π'
 
 				elif number %2 !=0:
-					text2 = 'π'
-					text1 = str(number)
+					text = ''
+					text1 = ''
+					text2 = ''
 
 			else:
 				text = str(number)
@@ -485,8 +465,6 @@ class painter(Widget):
 		for segment in self.segments:
 			self.remove_widget(segment)
 
-
-
 	def draw_dots(self):
 		self.recovery_coordinations()
 		with self.canvas:
@@ -500,9 +478,7 @@ class painter(Widget):
 		self.recovery_coordinations()
 		if len(self.graphics_manager.functions) >1:
 			self.generals_active = True
-
 			self.graphics_manager.draw_general_dots()
-
 			self.color_load()
 			self.recovery(full=False)
 
@@ -549,10 +525,10 @@ class painter(Widget):
 
 		string = (Label(text = string,font_size = font_size,color = self.curent_color,
 									x = x_pose,
-									center_y = height-15 - self.list_count*30))
+									center_y = height-35 - self.list_count*30))
 
 		string1 = (Label(text = 'f(x):',font_size = font_size,color = self.curent_color,x = self.list.pos[0]-20 ,
-									center_y = height-15 - self.list_count*30))
+									center_y = height-35 - self.list_count*30))
 
 		self.App_window.add_widget(string)
 		self.App_window.add_widget(string1)
@@ -605,18 +581,15 @@ class painter(Widget):
 					object[1].points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y,pos[4]+x,pos[5]+y]
 
 				else:
-					count = 0
 					new_pos = []
-					with self.canvas:
-						for pos in object.points:
-							if count %2 ==0:
-								new_pos.append( pos + x)
+					for count,pos in enumerate(object.points):
+						if count %2 ==0:
+							new_pos.append( pos + x)
 
-							else:
-								 new_pos.append( pos + y)
+						else:
+								new_pos.append( pos + y)
 
-							object.points = new_pos
-							count +=1
+						object.points = new_pos
 			if self.Y_axis:
 				pos = self.X_axis.points
 				self.X_axis.points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y]
@@ -627,15 +600,13 @@ class painter(Widget):
 			for graphic in self.functions:
 				for segment in graphic:
 					new_pos = []
-					count =0
-					for coord in segment.points:
+					for count,coord in enumerate(segment.points):
 
 						if count %2 ==0:
 								new_pos.append( coord + x)
 
 						else:
 							new_pos.append( coord + y)
-						count +=1
 
 					segment.points = new_pos
 			if self.segments:

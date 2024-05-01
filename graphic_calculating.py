@@ -1,10 +1,9 @@
 import numpy as np
 import sympy as sp
-import math
 import pyautogui
 resolution = pyautogui.size()
-width = resolution[0]-1
-height = resolution[1]-1
+width = resolution[0]
+height = resolution[1]
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -14,7 +13,7 @@ from kivy.uix.togglebutton import ToggleButton
 
 
 def Building_function(inputs,devisions,text,Window):
-	rounding = 3
+	rounding = 2
 
 	function = ''
 	count = 0
@@ -45,7 +44,7 @@ def Building_function(inputs,devisions,text,Window):
 		rounding = 3
 
 	x = sp.symbols('x')
-	y = sp.symbols('y')
+
 	coords = np.array([])	#массив с координатами точек графика вида (x1,y1,x2,y2,x3,y3,...)
 	try:
 		expression = (sp.sympify(function.replace('π','3.14159')))		#парсинг полученного выражения(получаем выражение удобного вида для пайтона и numpy)
@@ -66,17 +65,13 @@ def Building_function(inputs,devisions,text,Window):
 		try:
 			result =round(fun(x),2)
 		except:
-			pass
-		try:
-			if result > 1000 or result < -1000:		#следим чтобы координаты точек не были слишком большими
-				continue
+			continue
+		if result > 1000 or result < -1000:		#следим чтобы координаты точек не были слишком большими
+			continue
 
-			elif str(result) != 'nan':
-				coords = np.append(coords,np.array([x,round(result,rounding)]))
+		elif str(result) != 'nan':
+			coords = np.append(coords,np.array([x,result]))
 
-		except:
-			Window.show_error('ошибка:формула введена некоректно')
-			return False
 
 	dots = finding_dots(fun,devisions,coords,function)
 
@@ -85,57 +80,28 @@ def Building_function(inputs,devisions,text,Window):
 
 def find_devision(function,coords):
 	dots = []
-	if not('/') in function:
-		return False
-	else:
-		count = 0
-		devision_chs = []
-		for ch in function:
-			if ch=='/':
-				devision_chs.append(count)
-			count +=1
-		expressions = []
-		for devisions in devision_chs:
-			count = 0
-			count1 = 0
-			new_function = function[devisions:]
-			if '(' in new_function:
+	expressions = []
+	for devision in function:
+		expressions.append(devision[1].text)
+	x = sp.symbols('x')
 
-				for ch in new_function:
-					count1 +=1
-					if ch =='(':
-						count +=1
-					elif ch ==')':
-						count -=1
-						if count ==0:
-							expressions.append((new_function[1:count1]))
-							break
-		else:
-			count = 0
-			symbols = ['+','-','/','*']
-			for ch in new_function[1:]:
-				if ch in symbols:
+	for expression in expressions:
+		try:
+			equation = sp.Eq(eval(expression), 0)
+			for dot in sp.solve(equation, x):
+				dots.append((dot, find_near_coord_dot(dot, coords)))
 
-					expressions.append((new_function[1:count+1]))
-				count +=1
+		except:
+			pass
 
-
-		x = sp.symbols('x')
-		for expression in expressions:
-			try:
-				equation = sp.Eq(eval(expression), 0)
-				for dot in sp.solve(equation, x):
-					dots.append((dot, find_near_coord_dot(dot, coords)))
-			except:
-				pass
-		return dots
+	return dots
 
 def finding_dots(function,devisions,coords,fun_str):
 	dots = []	#список в котором находятся выколотые точки
 	another_checking_needed = False
 	if not ('cos') in fun_str and not ('tan') in fun_str and not ('sin') in fun_str and not ('cot') in fun_str:
 		if not ('√') in fun_str:
-			dots == find_devision(fun_str,coords)
+			dots == find_devision(devisions,coords)
 			if not(dots):
 				dots = []
 	for devision in devisions:
@@ -171,8 +137,7 @@ def finding_dots(function,devisions,coords,fun_str):
 def find_near_coord_dot(dot,coords):
 	if -50 <dot<50:
 		for i in range(0,len(coords),2):
-			if not(coords[i] <= dot >-40):
-
+			if not(coords[i] <= dot >-50):
 				if -50 < coords[i+1] < 50 and abs(coords[i+1] - coords[i-1])< 10:
 					return (coords[i+1],coords[i-1])
 				else:
@@ -185,7 +150,6 @@ class ask_function_buttons(Widget):
 		self.window = window
 
 	def typing(self,text):
-
 		self.window.typing(text)
 
 
@@ -236,7 +200,7 @@ class Window_ask_function(Widget):
 			self.devisions.append((self.delit,self.znamen))
 
 
-			size_new_input = (350 - (posx-width/3-135),60)
+			size_new_input = ( 350+(width/2-100)-posx-80,60)
 
 			self.new_input = TextInput(x = posx+self.delit.size[0],
 										center_y = height/2+190,size=size_new_input,
@@ -270,12 +234,13 @@ class Window_ask_function(Widget):
 	def increase_size(self,Object,value):
 		new_size = len(value) * 11
 		sub_size = 0
+
 		for delit in self.devisions:
 			sub_size += delit[0].size[0]
 
 		for Input in self.input_s[:-1]:
 			sub_size += Input.size[0]
-		if Object == self.delit or Object == self.znamen:
+		if Object == self.delit or Object == self.znamen and self.devisions:
 			if new_size > self.delit.size[0]-5:
 				self.delit.size[0] = new_size
 				self.znamen.size[0] = new_size
@@ -351,7 +316,6 @@ class Window_ask_function(Widget):
 
 	def make_active(self,input,value):
 		if value:
-
 			self.active = input
 
 
@@ -376,7 +340,10 @@ class Ask_function_but(Button):
 	def remove_window(self):
 		self.active = False
 		self.painter.drawing_accept = True
-		self.window.parent.remove_widget(self.window)
+		try:
+			self.window.parent.remove_widget(self.window)
+		except:
+			pass
 
 
 

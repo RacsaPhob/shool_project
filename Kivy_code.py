@@ -36,15 +36,7 @@ kivy_code = f"""
         Color:
             rgb:(0,0,0)
 
-<moving_painter_but>:
-    size:{width/30},{height/30}
-    pos: {width/10},{height/4 - height/30}
-    
-    text:'\/'
-    
-    on_release:root.released()
-    
-    
+
 <moving_painter_widget>:
     Button:
         on_press: root.pressed(0,{move_value*(-1)})
@@ -201,7 +193,7 @@ kivy_code = f"""
 
 
 <Figure_buttons_settings>:
-    pos:{width/2+width/6},{height/4-height/30*2}
+    pos:{width/2+width/6},{height/4-height/30-10}
     size:{width/40},{height/30}
     cols:2
     rows:2
@@ -238,7 +230,7 @@ kivy_code = f"""
         center_x : {width/2-140}
         center_y : {height/2+30}
         size:(70,50)
-        on_release: root.yes(root)
+        on_release: root.yes()
         text:'ДА'
         font_size:25       
         background_color:0.65, 0.01, 0.01, 1
@@ -252,7 +244,7 @@ kivy_code = f"""
         center_x : {width/2+150}
         center_y : {height/2+30}
         size:(70,50)
-        on_release: root.no(root)
+        on_release: root.no()
         text:'НЕТ'
         font_size:20
         background_color:0.35, 0.35, 0.4, 1
@@ -264,7 +256,7 @@ kivy_code = f"""
         center_x : {width/2+220}
         center_y : {height/2+260}
         size:(70,30)
-        on_release: root.no(root)
+        on_release: root.no()
         text:'НАЗАД'
         font_size:15
         background_color:0.35, 0.35, 0.4, 1
@@ -295,8 +287,8 @@ kivy_code = f"""
         on_press:root.pressed_left(left)
         
         center_x :{width/1.0955}
-        center_y: {height-height/85}
-        size:{width/20},{height/20}
+        center_y: {height-height/50}
+        size:{width/21},{height/21}
         on_touch_up:root.touch_up(self,'left')
         on_release:root.release_left()
         
@@ -307,9 +299,9 @@ kivy_code = f"""
         background_down:'images/return_button.png'
         on_press:root.pressed_right(right)
         center_x :{width/1.0955+width/20+(width/340)}
-        center_y: {height-height/85}
+        center_y: {height-height/50}
 
-        size:{width/20},{height/20}
+        size:{width/21},{height/21}
 
         on_touch_up:root.touch_up(self,'right')
         on_release:root.release_right()
@@ -319,8 +311,8 @@ kivy_code = f"""
 
 
 <change_size>:
-    size: (32,32)
-    pos: ({width/1.13},{height/4.5-16})
+    size: ({width//60},{width//60})
+    pos: ({width/1.13},{height/4.5-height//67})
     background_normal: 'images/button.png'
     background_down: 'images/button.png'
     Label:
@@ -329,11 +321,17 @@ kivy_code = f"""
         font_size:{width/90}
 
 
-
+<Clear_button>:
+    size : ({width/20},{width/20})
+    pos: (0,{height/9})
+    background_normal:'images/trash.png'
+    on_release: root.released()
+	background_down:'images/trash.png'
+    
 
 <change_bright>:
-    size: (32,32)
-    pos: ({width/1.05},{height/6.2 - 16})
+    size: ({width//60},{width//60})
+    pos: ({width/1.05},{height/6.2 - height//67})
     background_normal: 'images/button.png'
     background_down: 'images/button.png'
     
@@ -558,7 +556,7 @@ kivy_code = f"""
     size: {width/6},{height/15}
     on_release:root.released()
     text:'ЗАДАТЬ ФУНКЦИЮ'
-    font_size:25
+    font_size:{width//75}
 
 
 

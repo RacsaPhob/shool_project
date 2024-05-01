@@ -1,10 +1,10 @@
+
 import pyautogui
 resolution = pyautogui.size()
 width = resolution[0]
 height = resolution[1]
 from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.graphics import (Color, Ellipse, Rectangle,Line)
+from kivy.graphics import (Color, Ellipse, Rectangle)
 
 
 class change_size(Button):
@@ -20,19 +20,19 @@ class change_size(Button):
 
         #создание кружочка для показа текущего размера кисти
         with self.canvas:
-            self.size_ellipse = Ellipse(pos=(width/1.025,(height/4.75)),size= (3,3))   #центральная позиция кружка меняется для того чтобы он был ровно посередине
+            self.size_ellipse = Ellipse(pos=(width/1.025,(height/4.6)),size= (3,3))   #центральная позиция кружка меняется для того чтобы он был ровно посередине
 
     def on_touch_move(self,click):
         #меняем положение кружка текущего размера кисти
         with self.canvas:
             self.size_ellipse.size = (self.painter.size_line*2,self.painter.size_line*2)
-            self.size_ellipse.pos = (width/1.025-self.painter.size_line/2,height/4.75-self.painter.size_line/2)
+            self.size_ellipse.pos = (width/1.025+3-self.painter.size_line,height/4.6+3-self.painter.size_line)
 
 
         if click.x > width/1.13 and click.x < width/1.05:
             if click.y > height/4.9 and click.y < height/4.1:
 
-                self.painter.color_save(self.curent_color)    #сохраняем цвет чтоб прога не лагала
+                self.painter.color_save(self.curent_color,self.change_bright.bright)    #сохраняем цвет чтоб прога не лагала
 
                 self.painter.size_line = (click.x -width/1.14)/8     #вычесление нового размера кисти
                 self.pos = (click.x-10,self.pos[1])
@@ -48,7 +48,7 @@ class change_size(Button):
             #когда мышь нажата на кнопку цвет кисти сохраняется и временно изменяется на белый т.к с полупрозрачным цветом прога лагает
                 if state == 'down':
 
-                        self.painter.color_save(self.curent_color)
+                        self.painter.color_save(self.curent_color,self.change_bright.bright)
 
                         self.pos = (mouse.x-10,self.pos[1])
 
@@ -69,8 +69,8 @@ class change_bright(Button):
         super(change_bright,self).__init__(**kwargs)
         with self.canvas:
     	    
-            self.bright_rect = Rectangle(pos=(width/1.02,height/6.5)
-    	    	,size=(30,30))
+            self.bright_rect = Rectangle(pos=(width/1.03,height/6.7)
+    	    	,size=(width/64,width/64))
 
 
     def on_touch_move(self,click):
@@ -109,5 +109,5 @@ class change_bright(Button):
         with self.canvas:
             Color(1,1,1,self.bright)
 
-            self.bright_rect = Rectangle(pos=(width/1.02,height/6.5),
-                size=(30,30))
+            self.bright_rect = Rectangle(pos=(width/1.03,height/6.7),
+                size=(width/64,width/64))

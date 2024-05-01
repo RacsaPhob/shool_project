@@ -74,3 +74,9 @@ def adjustment(width,height):
     img = Image.open('images/add_colorOrig.png')
     img = img.resize(size)
     img.save('images/add_color.png')
+
+    size = (width // 60, width // 60)
+
+    img = Image.open('images/buttonOrig.png')
+    img = img.resize(size)
+    img.save('images/button.png')

@@ -1,12 +1,5 @@
 from kivy.graphics import (Color, Ellipse,Triangle, Rectangle,Line)
-
 from kivy.uix.widget import Widget
-
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-import copy
-import math
-
 import pyautogui
 from shapely.geometry import LineString
 width,height = pyautogui.size()
@@ -180,21 +173,6 @@ class graphic_function():
 		self.dots_draw.clear()
 
 
-class moving_painter_but(Button):
-	def __init__(self,App_window,painter,**kwargs):
-		self.App_window = App_window
-		super((moving_painter_but),self).__init__(**kwargs)
-		self.widget = moving_painter_widget(painter)
-
-	def released(self):
-
-		if not(self.widget in self.App_window.children):
-			self.text = '/\\'
-			self.App_window.add_widget(self.widget)
-
-		else:
-			self.text = '\/'
-			self.App_window.remove_widget(self.widget)
 
 class moving_painter_widget(Widget):
 
@@ -208,116 +186,83 @@ class moving_painter_widget(Widget):
 
 
 class MakeSquare():
-	def __init__(self,click,size,filling,canvas):
+	def __init__(self,click,size,filling):
 		self.filling = filling
-		self.canvas = canvas
 
-		with self.canvas:
-			if not(filling):
-				#создаем цикличную линию из четырех точек
-				self.figure = Line(points=(click.x,click.y),width=size/2,close=True)
+		if not(filling):
+			#создаем цикличную линию из четырех точек
+			self.figure = Line(points=(click.x,click.y),width=size/2,close=True)
 
-			else:
-				self.figure = Rectangle(pos = (click.x,click.y),size = (0,0))
+		else:
+			self.figure = Rectangle(pos = (click.x,click.y),size = (0,0))
 
 
 	def moving(self,pos):
 		#при движении зажатой мыши изменяются соответсвующие координаты у точек линии
-		with self.canvas:
-			if not(self.filling):
-				square = self.figure.points
-				self.figure.points = (square[0],square[1],square[0],pos.y,pos.x,pos.y,pos.x,square[1])
+		if not(self.filling):
+			square = self.figure.points
+			self.figure.points = (square[0],square[1],square[0],pos.y,pos.x,pos.y,pos.x,square[1])
 
-			else:
-				self.figure.size = (pos.x - self.figure.pos[0],pos.y - self.figure.pos[1])
+		else:
+			self.figure.size = (pos.x - self.figure.pos[0],pos.y - self.figure.pos[1])
 
 
 	def move_directly(self,x,y):
-		with self.canvas:
-			if self.filling:
-				self.figure.pos = (self.figure.pos[0]+x,self.figure.pos[1]+y)
+		if self.filling:
+			self.figure.pos = (self.figure.pos[0]+x,self.figure.pos[1]+y)
 
-			else:
-				pos = self.figure.points
-				self.figure.points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y,pos[4]+x,pos[5]+y,pos[6]+x,pos[7]+y]
+		else:
+			pos = self.figure.points
+			self.figure.points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y,pos[4]+x,pos[5]+y,pos[6]+x,pos[7]+y]
 
 
 
 class MakeTriangle():
-	def __init__(self,click,size,filling,canvas):
+	def __init__(self,click,size,filling):
 		self.filling = filling
-		self.canvas = canvas
 
-		with self.canvas:
-			if not (filling):
+		if not (filling):
 				#создаем цикличную линию из четырех точек
-				self.figure = Line(points=(click.x,click.y,click.x,click.y),width=size/2,close=True)
+			self.figure = Line(points=(click.x,click.y,click.x,click.y),width=size/2,close=True)
 
-			else:
-				self.figure = Triangle(points=[click.x,click.y, 0,0])
+		else:
+			self.figure = Triangle(points=[click.x,click.y, 0,0])
 
 
 	def moving(self,pos):
 		#при движении зажатой мыши изменяются соответсвующие координаты у точек линии
-		with self.canvas:
-			triangle = self.figure.points
-			self.figure.points = (triangle[0],triangle[1],pos.x,triangle[1],triangle[0] + ((pos.x-triangle[0])/2),pos.y)
+		triangle = self.figure.points
+		self.figure.points = (triangle[0],triangle[1],pos.x,triangle[1],triangle[0] + ((pos.x-triangle[0])/2),pos.y)
 
 
 	def move_directly(self,x,y):
-		with self.canvas:
-			pos = self.figure.points
-			self.figure.points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y,pos[4]+x,pos[5]+y]
+		pos = self.figure.points
+		self.figure.points = [pos[0]+x,pos[1]+y,pos[2]+x,pos[3]+y,pos[4]+x,pos[5]+y]
 
 class MakeEllipse():
-	def __init__(self,click,size,filling,canvas):
+	def __init__(self,click,size,filling):
 		self.filling = filling
-		self.canvas = canvas
 
-		with self.canvas:
-			if not(filling):
+		if not(filling):
 			#создаем цикличную линию из четырех точек
-				self.figure = Line(ellipse=(click.x,click.y,0,0),width=size/2)
-			else:
-				self.figure = Ellipse(pos=(click.x,click.y),size=(0,0))
-			self.start_pos = (click.x,click.y)
-
-
-	def moving(self,pos):
-		#при движении зажатой мыши изменяются соответсвующие координаты у точек линии
-		with self.canvas:
-			oval = self.start_pos
-			if not self.filling:
-				self.figure.ellipse = (oval[0],oval[1],pos.x-oval[0],pos.y-oval[1])
-
-			else:
-				self.figure.size = (pos.x-oval[0],pos.y-oval[1])
-
-	def move_directly(self,x,y):
-		with self.canvas:
-			if self.filling:
-				self.figure.pos = [self.figure.pos[0]+x,self.figure.pos[1]+y]
-
-			else:
-				pos = self.figure.ellipse
-				self.figure.ellipse = [pos[0]+x,pos[1]+y,pos[2],pos[3]]
-
+			self.figure = Line(ellipse=(click.x,click.y,0,0),width=size/2)
+		else:
+			self.figure = Ellipse(pos=(click.x,click.y),size=(0,0))
+		self.start_pos = (click.x,click.y)
 
 
 
 
 	def moving(self,pos):
 		#при движении зажатой мыши изменяются соответсвующие координаты у точек линии
-		with self.canvas:
-			oval = self.start_pos
-			if not self.filling:
-				self.figure.ellipse = (oval[0],oval[1],pos.x-oval[0],pos.y-oval[1])
+		oval = self.start_pos
+		if not self.filling:
+			self.figure.ellipse = (oval[0],oval[1],pos.x-oval[0],pos.y-oval[1])
 
-			else:
-				self.figure.size = (pos.x-oval[0],pos.y-oval[1])
+		else:
+			self.figure.size = (pos.x-oval[0],pos.y-oval[1])
 
 	def move_directly(self,x,y):
-		with self.canvas:
 			if self.filling:
 				self.figure.pos = [self.figure.pos[0]+x,self.figure.pos[1]+y]
 
